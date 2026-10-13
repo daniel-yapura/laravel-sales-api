@@ -130,7 +130,12 @@ Protección:
 |---|---|---:|---|
 | POST | `/api/register` | public | Registrar usuario |
 | POST | `/api/login` | public | Iniciar sesión y obtener token JWT |
-| GET | `/api/product` | jwt | Listar productos paginados |
+| GET | `/api/category` | jwt | Listar categorías |
+| POST | `/api/category` | jwt | Crear categoría |
+| GET | `/api/category/{category}` | jwt | Mostrar categoría |
+| PUT/PATCH | `/api/category/{category}` | jwt | Actualizar categoría |
+| DELETE | `/api/category/{category}` | jwt | Eliminar categoría (soft delete) |
+| POST | `/api/category/{category}/restore` | jwt | Restaurar categoría eliminada |
 | POST | `/api/product` | jwt | Crear producto |
 | GET | `/api/product/{product}` | jwt | Mostrar producto |
 | PUT/PATCH | `/api/product/{product}` | jwt | Actualizar producto |
@@ -141,6 +146,8 @@ Protección:
 | GET | `/api/who` | jwt | Usuario autenticado |
 | POST | `/api/logout` | jwt | Cerrar sesión |
 | POST | `/api/refresh` | jwt | Refrescar token |
+
+> Las categorías usan soft delete. Un producto conserva su `category_id` aunque la categoría esté eliminada; para reactivarla, usar `POST /api/category/{category}/restore`.
 
 ### Cabecera de autenticación
 
