@@ -1,6 +1,25 @@
 # Backend Laravel - Sales Module API
 
+![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php)
+![Laravel 11](https://img.shields.io/badge/Laravel-11.x-FF2D20?logo=laravel)
+![JWT Auth](https://img.shields.io/badge/Auth-JWT-000000)
+![Pest](https://img.shields.io/badge/Tests-Pest-9b51e0)
+![License: MIT](https://img.shields.io/badge/License-MIT-green)
+
 API RESTful desarrollada en Laravel para la gestión integral de **productos**, **inventario**, **ventas** y **cálculo de impuestos**, con autenticación **JWT** y arquitectura por capas de negocio (`Services` & `Entities`).
+
+## Tabla de contenido
+
+- [Características](#características)
+- [Requisitos](#requisitos)
+- [Instalación local](#instalación-local)
+- [Endpoints principales](#endpoints-principales)
+- [Arquitectura de negocio](#arquitectura-de-negocio)
+- [Inventario](#inventario)
+- [Ejemplos de uso](#ejemplos-de-uso)
+- [Pruebas](#pruebas)
+- [Comandos útiles](#comandos-útiles)
+- [Seguridad y portabilidad](#seguridad-y-portabilidad)
 
 ## Características
 
@@ -103,43 +122,46 @@ npm run build
 
 Base: `/api`
 
-### Públicos
+Protección:
+- `public` = sin JWT
+- `jwt` = requiere `Authorization: Bearer <token>`
 
-- `POST /api/register` - Registrar usuario.
-- `POST /api/login` - Iniciar sesión y obtener token JWT.
+| Método | Ruta | Protección | Descripción |
+|---|---|---:|---|
+| POST | `/api/register` | public | Registrar usuario |
+| POST | `/api/login` | public | Iniciar sesión y obtener token JWT |
+| GET | `/api/product` | jwt | Listar productos paginados |
+| POST | `/api/product` | jwt | Crear producto |
+| GET | `/api/product/{product}` | jwt | Mostrar producto |
+| PUT/PATCH | `/api/product/{product}` | jwt | Actualizar producto |
+| DELETE | `/api/product/{product}` | jwt | Eliminar producto (soft delete) |
+| GET | `/api/sale` | jwt | Listar ventas |
+| POST | `/api/sale` | jwt | Crear venta |
+| GET | `/api/info/tax/{id}` | jwt | Calcular precio con IVA |
+| GET | `/api/who` | jwt | Usuario autenticado |
+| POST | `/api/logout` | jwt | Cerrar sesión |
+| POST | `/api/refresh` | jwt | Refrescar token |
 
-### Protegidos con JWT
-
-Enviar en cabecera:
+### Cabecera de autenticación
 
 ```txt
 Authorization: Bearer <token>
 ```
 
-Productos:
-
-- `GET /api/product` - Listar productos paginados (`per_page`, `page`).
-- `POST /api/product` - Crear producto.
-- `GET /api/product/{product}` - Mostrar producto.
-- `PUT|PATCH /api/product/{product}` - Actualizar producto.
-- `DELETE /api/product/{product}` - Eliminar producto (soft delete).
-
-Ventas:
-
-- `GET /api/sale` - Listar ventas.
-- `POST /api/sale` - Crear venta.
-
-Impuestos:
-
-- `GET /api/info/tax/{id}` - Calcular precio con IVA de un producto.
-
-Sesión:
-
-- `GET /api/who` - Usuario autenticado.
-- `POST /api/logout` - Cerrar sesión.
-- `POST /api/refresh` - Refrescar token.
-
 ## Arquitectura de negocio
+
+Flujo general:
+
+```txt
+HTTP Request
+  -> Controller
+  -> Form Request / Validation
+  -> Service (ProductService, CreateSaleService)
+  -> Entity (ConceptEntity, SaleEntity, Taxes)
+  -> Eloquent Model
+  -> Database
+  <- JSON Response
+```
 
 - `app/Http/Controllers`: capa HTTP y respuestas JSON.
 - `app/Http/Requests`: validación con form requests.
@@ -153,6 +175,78 @@ Sesión:
 - Al crear una venta, el servicio verifica que cada producto tenga stock suficiente.
 - Si alguna línea no cumple, la operación se revierte y se devuelve `422`.
 - Si hay stock suficiente, se descuenta por cada concepto dentro de una transacción.
+
+## Ejemplos de uso
+
+### Login
+
+Request:
+
+```http
+POST /api/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password"
+}
+```
+
+Response:
+
+```json
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOi...",
+  "token_type": "bearer",
+  "expires_in": 3600
+}
+```
+
+### Crear venta
+
+Request:
+
+```http
+POST /api/sale
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "email": "cliente@example.com",
+  "sale_date": "2025-03-12 10:30:00",
+  "concepts": [
+    {
+      "quantity": 2,
+      "product_id": 1
+    },
+    {
+      "quantity": 1,
+      "product_id": 2
+    }
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "id": 1,
+  "email": "cliente@example.com",
+  "sale_date": "2025-03-12 10:30:00",
+  "concepts": [
+    {
+      "quantity": 2,
+      "price": 100.0,
+      "product_id": 1,
+      "total": 200.0
+    }
+  ],
+  "total": 200.0
+}
+```
+
+El precio de cada concepto se toma del producto en el momento de la venta.
 
 ## Pruebas
 
@@ -184,5 +278,8 @@ vendor/bin/pint --format agent
 - La caché generada de Laravel se ignora.
 - Usa `.env.example` como plantilla y genera tus propias claves localmente.
 - No compartas `APP_KEY`, `JWT_SECRET` ni credenciales de base de datos.
-PHP
-echo done
+- Los directorios `storage/` y `bootstrap/cache/` contienen archivos generados por Laravel y no deben versionarse como código fuente.
+
+## Licencia
+
+Este proyecto se distribuye bajo la licencia MIT.
