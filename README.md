@@ -286,6 +286,15 @@ vendor/bin/pint --format agent
 - No compartas `APP_KEY`, `JWT_SECRET` ni credenciales de base de datos.
 - Los directorios `storage/` y `bootstrap/cache/` contienen archivos generados por Laravel y no deben versionarse como código fuente.
 
+## Panel administrativo (opcional)
+
+El proyecto incluye un panel Blade de demostración que consume la API por Fetch con JWT.
+
+- Rutas: `/login`, `/products`, `/categories`, `/sales`, `/tax`.
+- Token: se guarda en `sessionStorage`.
+- Assets: `npm run build` o `npm run dev`.
+- La API REST se puede consumir independientemente por cualquier cliente.
+
 ## Licencia
 
 Este proyecto se distribuye bajo la licencia MIT.
