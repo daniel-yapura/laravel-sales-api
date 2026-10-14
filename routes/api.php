@@ -14,8 +14,6 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::middleware('jwt.auth')->group(function () {
     Route::apiResource('/category', CategoryController::class);
 
-    Route::post('/category/{category}/restore', [CategoryController::class, 'restore']);
-
     Route::apiResource('/product', ProductController::class)
         ->middleware(LogRequests::class);
 

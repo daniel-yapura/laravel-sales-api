@@ -29,33 +29,44 @@ test('Crea una categoría', function () {
     ]);
 
     $response->assertStatus(Response::HTTP_CREATED)
-        ->assertJsonFragment(['name' => 'Bebidas']);
+        ->assertJsonFragment(['name' => 'Bebidas', 'slug' => 'bebidas']);
 
-    $this->assertDatabaseHas('category', ['name' => 'Bebidas']);
+    $this->assertDatabaseHas('category', ['name' => 'Bebidas', 'slug' => 'bebidas']);
 });
 
-test('No crea categoría duplicada', function () {
-    Category::factory()->create(['name' => 'Bebidas']);
+test('No crea categoría duplicada por slug', function () {
+    Category::factory()->create(['name' => 'Bebidas', 'slug' => 'bebidas']);
 
     $response = $this->postJson(route('category.store'), [
-        'name' => 'Bebidas',
+        'name' => 'BEBIDAS',
     ]);
 
     $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY)
         ->assertJsonValidationErrors(['name']);
 });
 
-test('Actualiza una categoría', function () {
-    $category = Category::factory()->create(['name' => 'Vieja']);
+test('Actualiza una categoría y recalcula slug', function () {
+    $category = Category::factory()->create(['name' => 'Vieja', 'slug' => 'vieja']);
 
     $response = $this->putJson(route('category.update', $category), [
-        'name' => 'Nueva',
+        'name' => 'Nueva categoria',
     ]);
 
     $response->assertStatus(Response::HTTP_OK)
-        ->assertJsonFragment(['name' => 'Nueva']);
+        ->assertJsonFragment(['name' => 'Nueva categoria', 'slug' => 'nueva-categoria']);
 
-    $this->assertDatabaseHas('category', ['id' => $category->id, 'name' => 'Nueva']);
+    $this->assertDatabaseHas('category', ['id' => $category->id, 'slug' => 'nueva-categoria']);
+});
+
+test('No actualiza con slug duplicado', function () {
+    Category::factory()->create(['name' => 'Existente', 'slug' => 'existente']);
+    $category = Category::factory()->create(['name' => 'Otra', 'slug' => 'otra']);
+
+    $response = $this->putJson(route('category.update', $category), [
+        'name' => 'EXISTENTE',
+    ]);
+
+    $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 });
 
 test('Elimina una categoría con soft delete', function () {
@@ -89,27 +100,20 @@ test('Un producto conserva category_id tras soft delete de categoría', function
     ]);
 });
 
-test('Restaura una categoría eliminada', function () {
-    $category = Category::factory()->create(['name' => 'Restaurar']);
+test('Reactiva automáticamente una categoría eliminada por slug', function () {
+    $category = Category::factory()->create(['name' => 'Restaurar', 'slug' => 'restaurar']);
     $category->delete();
 
-    $response = $this->postJson("/api/category/{$category->id}/restore");
+    $response = $this->postJson(route('category.store'), [
+        'name' => 'RESTAURAR',
+    ]);
 
     $response->assertStatus(Response::HTTP_OK)
-        ->assertJsonFragment(['name' => 'Restaurar']);
+        ->assertJsonFragment(['id' => $category->id, 'slug' => 'restaurar']);
 
     $this->assertDatabaseHas('category', [
         'id' => $category->id,
         'deleted_at' => null,
+        'slug' => 'restaurar',
     ]);
-});
-
-test('No restaura si existe categoría activa con mismo nombre', function () {
-    $active = Category::factory()->create(['name' => 'Duplicada']);
-    $deleted = Category::factory()->create(['name' => 'Duplicada']);
-    $deleted->delete();
-
-    $response = $this->postJson("/api/category/{$deleted->id}/restore");
-
-    $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
 });

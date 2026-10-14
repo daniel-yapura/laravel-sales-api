@@ -3,6 +3,7 @@
 namespace App\Business\Services;
 
 use App\Models\Category;
+use Illuminate\Support\Str;
 
 class CategoryService
 {
@@ -16,19 +17,61 @@ class CategoryService
         return Category::findOrFail($id);
     }
 
-    public function findTrashed(int $id): Category
+    public function create(array $data): array
     {
-        return Category::withTrashed()->findOrFail($id);
-    }
+        $slug = Str::slug($data['name']);
 
-    public function create(array $data): Category
-    {
-        return Category::create($data);
+        $activeCategory = Category::where('slug', $slug)->first();
+
+        if ($activeCategory) {
+            throw new \RuntimeException('Ya existe una categoría activa con ese nombre.');
+        }
+
+        $deletedCategory = Category::onlyTrashed()->where('slug', $slug)->first();
+
+        if ($deletedCategory) {
+            $deletedCategory->update([
+                'name' => $data['name'],
+                'slug' => $slug,
+            ]);
+
+            $deletedCategory->restore();
+
+            return [
+                'category' => $deletedCategory,
+                'created' => false,
+                'restored' => true,
+            ];
+        }
+
+        $category = Category::create([
+            'name' => $data['name'],
+            'slug' => $slug,
+        ]);
+
+        return [
+            'category' => $category,
+            'created' => true,
+            'restored' => false,
+        ];
     }
 
     public function update(Category $category, array $data): Category
     {
-        $category->update($data);
+        $slug = Str::slug($data['name']);
+
+        $exists = Category::where('slug', $slug)
+            ->where('id', '!=', $category->id)
+            ->exists();
+
+        if ($exists) {
+            throw new \RuntimeException('Ya existe una categoría activa con ese nombre.');
+        }
+
+        $category->update([
+            'name' => $data['name'],
+            'slug' => $slug,
+        ]);
 
         return $category;
     }
@@ -36,22 +79,5 @@ class CategoryService
     public function delete(Category $category): void
     {
         $category->delete();
-    }
-
-    public function restore(int $id): Category
-    {
-        $category = Category::withTrashed()->findOrFail($id);
-
-        if (! $category->trashed()) {
-            throw new \RuntimeException('La categoría ya está activa.');
-        }
-
-        if (Category::where('name', $category->name)->whereNull('deleted_at')->exists()) {
-            throw new \RuntimeException('Ya existe una categoría activa con ese nombre.');
-        }
-
-        $category->restore();
-
-        return $category;
     }
 }

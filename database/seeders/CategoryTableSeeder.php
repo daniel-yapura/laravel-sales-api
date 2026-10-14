@@ -15,12 +15,15 @@ class CategoryTableSeeder extends Seeder
         DB::table('category')->insert([
             [
                 'name' => 'Comida',
+                'slug' => 'comida',
             ],
             [
                 'name' => 'Bebida',
+                'slug' => 'bebida',
             ],
             [
                 'name' => 'Alcohol',
+                'slug' => 'alcohol',
             ],
         ]);
     }

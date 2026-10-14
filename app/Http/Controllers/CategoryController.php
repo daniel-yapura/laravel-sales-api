@@ -19,9 +19,17 @@ class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request)
     {
-        $category = $this->categoryService->create($request->validated());
+        try {
+            $result = $this->categoryService->create($request->validated());
 
-        return response()->json($category, Response::HTTP_CREATED);
+            $status = $result['created']
+                ? Response::HTTP_CREATED
+                : Response::HTTP_OK;
+
+            return response()->json($result['category'], $status);
+        } catch (\RuntimeException $e) {
+            return response()->json(['errors' => ['name' => [$e->getMessage()]]], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
     }
 
     public function show(Category $category)
@@ -31,9 +39,13 @@ class CategoryController extends Controller
 
     public function update(UpdateCategoryRequest $request, Category $category)
     {
-        $category = $this->categoryService->update($category, $request->validated());
+        try {
+            $category = $this->categoryService->update($category, $request->validated());
 
-        return response()->json($category);
+            return response()->json($category);
+        } catch (\RuntimeException $e) {
+            return response()->json(['errors' => ['name' => [$e->getMessage()]]], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
     }
 
     public function destroy(Category $category)
@@ -41,16 +53,5 @@ class CategoryController extends Controller
         $this->categoryService->delete($category);
 
         return response()->json(['message' => 'Categoría eliminada'], Response::HTTP_OK);
-    }
-
-    public function restore(int $id)
-    {
-        try {
-            $category = $this->categoryService->restore($id);
-
-            return response()->json($category);
-        } catch (\RuntimeException $e) {
-            return response()->json(['error' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
     }
 }
